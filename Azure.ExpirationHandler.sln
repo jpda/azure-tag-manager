@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27703.2018
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.ExpirationHandler.Func", "Azure.ExpirationHandler.Func\Azure.ExpirationHandler.Func.csproj", "{34A808FB-4B9B-4A2D-9A3C-77F8F45985DF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.ExpirationHandler.Console", "Azure.ExpirationHandler.Console\Azure.ExpirationHandler.Console.csproj", "{735AF73F-A263-46AC-8C7B-3F54898A648F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{34A808FB-4B9B-4A2D-9A3C-77F8F45985DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34A808FB-4B9B-4A2D-9A3C-77F8F45985DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34A808FB-4B9B-4A2D-9A3C-77F8F45985DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34A808FB-4B9B-4A2D-9A3C-77F8F45985DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{735AF73F-A263-46AC-8C7B-3F54898A648F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{735AF73F-A263-46AC-8C7B-3F54898A648F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{735AF73F-A263-46AC-8C7B-3F54898A648F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{735AF73F-A263-46AC-8C7B-3F54898A648F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {28AEA546-45B9-4BC2-AF98-3FA1DDA07625}
+	EndGlobalSection
+EndGlobal

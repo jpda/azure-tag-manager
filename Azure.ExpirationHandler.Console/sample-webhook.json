@@ -1,0 +1,40 @@
+﻿{
+  "schemaId": "Microsoft.Insights/activityLogs",
+  "data": {
+    "status": "Activated",
+    "context": {
+      "activityLog": {
+        "authorization": {
+          "action": "Microsoft.Resources/subscriptions/resourceGroups/write",
+          "scope": "/
+        },
+        "channels": "Operation",
+        "claims": null,
+        "caller": "",
+        "correlationId": "",
+        "description": "",
+        "eventSource": "Administrative",
+        "eventTimestamp": "2018-06-19T20:26:51.1494527+00:00",
+        "httpRequest": "\"{\"clientRequestId\":\"\",\"clientIpAddress\":\"\",\"method\":\"PUT\"}\"",
+        "eventDataId": "",
+        "level": "Informational",
+        "operationName": "Microsoft.Resources/subscriptions/resourceGroups/write",
+        "operationId": "",
+        "properties": {
+          "statusCode": "Created",
+          "serviceRequestId": null,
+          "responseBody": "\"{\"id\":\"/subscriptions/sub/resourceGroups/poc-me-prod-azman-test\",\"name\":\"poc-me-prod-azman-test\",\"location\":\"eastus\",\"properties\":{\"provisioningState\":\"Succeeded\"}}\""
+        },
+        "resourceId": "/subscriptions/sub/resourceGroups/poc-me-prod-azman-test",
+        "resourceGroupName": "poc-me-prod-azman-test",
+        "resourceProviderName": "Microsoft.Resources",
+        "status": "Succeeded",
+        "subStatus": "Created",
+        "subscriptionId": "sub",
+        "submissionTimestamp": "2018-06-19T20:27:13.2198102+00:00",
+        "resourceType": "Microsoft.Resources/subscriptions/resourceGroups"
+      }
+    },
+    "properties": {}
+  }
+}
