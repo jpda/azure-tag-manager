@@ -8,12 +8,13 @@ using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
 using Microsoft.Azure.Services.AppAuthentication;
 //using Microsoft.Rest;
 using Newtonsoft.Json;
+using Microsoft.Rest;
 
 namespace ExpirationHandler.ConsoleTest
 {
     class Program
     {
-        
+      
 
         static void Main(string[] args)
         {
@@ -26,7 +27,7 @@ namespace ExpirationHandler.ConsoleTest
             Console.WriteLine($"Connected to {a.SubscriptionId}, searching...");
             var c = new Cleaner(a);
             //c.DeleteExpiredGroups(true).Wait();
-            c.ParseWebhook().Wait();
+            c.GetUntaggedResourceGroups().Wait();
             Console.WriteLine("All finished");
             Console.ReadLine();
         }
@@ -101,6 +102,7 @@ namespace ExpirationHandler.ConsoleTest
                     tags.Add("thing", name);
                 };
 
+                tags.Add("expires", DateTime.Now.AddDays(30).ToString("o"));
                 foreach (var a in tags)
                 {
                     Console.WriteLine($"{a.Key}: {a.Value}");

@@ -13,19 +13,25 @@ namespace Azure.ExpirationHandler.Func
 {
     public static class GenerateTagSuite
     {
+        private static IAzure _azr;
+
         [FunctionName("generate-tag-suite")]
-        public static void Run([QueueTrigger("generate-tag-suite", Connection = "InboundTagSuiteConnection")]string myQueueItem, TraceWriter log, ExecutionContext context)
+        public static void Run([QueueTrigger("generate-tag-suite", Connection = "QueueStorageAccount")]string myQueueItem, TraceWriter log, ExecutionContext context)
         {
             var config = new ConfigurationBuilder().SetBasePath(context.FunctionAppDirectory).AddJsonFile("local.settings.json", optional: true, reloadOnChange: true).AddEnvironmentVariables().Build();
-            log.Info($"C# Queue trigger function processed: {myQueueItem}");
             dynamic data = JsonConvert.DeserializeObject(myQueueItem);
-            //var tenant = config["TenantId"];
             var subscription = data.SubscriptionId.Value;
-            var a = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(new AzureCredentials(new MSILoginInformation(MSIResourceType.AppService), AzureEnvironment.AzureGlobalCloud)).WithSubscription(subscription);
-            SetTags(a, data.GroupName.Value, data.User.Value, log);
+            var dateCreated = data.DateCreated.Value;
+
+            if (_azr == null || _azr.SubscriptionId != subscription)
+            {
+                log.Info($"Created a new instance of _azr for subscription {subscription}");
+                _azr = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(new AzureCredentials(new MSILoginInformation(MSIResourceType.AppService), AzureEnvironment.AzureGlobalCloud)).WithSubscription(subscription);
+            }
+            SetTags(_azr, data.GroupName.Value, data.User.Value, dateCreated, log);
         }
 
-        private static void SetTags(IAzure azr, string newResourceGroupName, string owner, TraceWriter log)
+        private static void SetTags(IAzure azr, string newResourceGroupName, string owner, string dateCreated, TraceWriter log)
         {
             var g = azr.ResourceGroups.GetByName(newResourceGroupName);
             var tags = new Dictionary<string, string>();
@@ -51,6 +57,13 @@ namespace Azure.ExpirationHandler.Func
                 tags.Add("thing", name);
                 tags.Add("owner", owner);
             };
+
+            if (!tags.Any(x => x.Key == "expires")) //don't update/overwrite expiration tag if it exists
+            {
+                DateTime creationDate = DateTime.UtcNow;
+                DateTime.TryParse(dateCreated, out creationDate);
+                tags.Add("expires", creationDate.AddDays(30).ToString("o"));
+            }
 
             foreach (var a in tags)
             {

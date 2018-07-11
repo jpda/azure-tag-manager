@@ -13,7 +13,7 @@ namespace Azure.ExpirationHandler.Func
     public static class WebhookResourceGroupCreated
     {
         [FunctionName("webhook-rg-created")]
-        public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]HttpRequest req, TraceWriter log, [Queue("generate-tag-suite")]IAsyncCollector<string> outputQueueItem)
+        public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]HttpRequest req, TraceWriter log, [Queue("generate-tag-suite", Connection = "QueueStorageAccount")]IAsyncCollector<string> outputQueueItem)
         {
             string requestBody = new StreamReader(req.Body).ReadToEnd();
             dynamic root = JsonConvert.DeserializeObject(requestBody);
@@ -25,10 +25,11 @@ namespace Azure.ExpirationHandler.Func
             await outputQueueItem.AddAsync(JsonConvert.SerializeObject(
                 new
                 {
-                    operation = root.data.context.activityLog.operationName,
+                    Operation = root.data.context.activityLog.operationName,
                     GroupName = root.data.context.activityLog.resourceGroupName,
                     User = root.data.context.activityLog.caller,
-                    SubscriptionId = root.data.context.activityLog.subscriptionId
+                    SubscriptionId = root.data.context.activityLog.subscriptionId,
+                    DateCreated = root.data.context.activityLog.eventTimestamp
                 }));
 
             return (ActionResult)new OkResult();
