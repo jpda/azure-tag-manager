@@ -30,7 +30,14 @@ namespace Azure.ExpirationHandler.Func
                 _azr = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(new AzureCredentials(new MSILoginInformation(MSIResourceType.AppService), AzureEnvironment.AzureGlobalCloud)).WithSubscription(subscription);
             }
             log.Info($"Deleting resource group {resourceGroupName}");
-            _azr.ResourceGroups.BeginDeleteByName(resourceGroupName);
+
+            bool.TryParse(config["delete-resource-group::Commit"], out bool commit);
+            log.Info($"Commit: {commit}");
+            if (commit)
+            {
+                _azr.ResourceGroups.BeginDeleteByName(resourceGroupName);
+            }
+
         }
     }
 }

@@ -14,20 +14,27 @@ namespace ExpirationHandler.ConsoleTest
 {
     class Program
     {
-      
+        private const string Tenant = "72f988bf-86f1-41af-91ab-2d7cd011db47";
+        private const string Subscription = "e7048bdb-835c-440f-9304-aa4171382839";
 
         static void Main(string[] args)
         {
             Console.WriteLine($"Connecting with tenant {Tenant}...");
             var provider = new AzureServiceTokenProvider();
             var accessToken = provider.GetAccessTokenAsync("https://management.azure.com/", Tenant).Result;
-            Azure.Configure().Authenticate(new AzureCredentials(new MSILoginInformation(MSIResourceType.AppService), AzureEnvironment.AzureGlobalCloud));
+            //Azure.Configure().Authenticate(new AzureCredentials(new MSILoginInformation(MSIResourceType.AppService), AzureEnvironment.AzureGlobalCloud));
             var t = new TokenCredentials(accessToken);
-            var a = Azure.Configure().Authenticate(new AzureCredentials(t, t, Tenant, AzureEnvironment.AzureGlobalCloud)).WithSubscription(Subscription);
-            Console.WriteLine($"Connected to {a.SubscriptionId}, searching...");
-            var c = new Cleaner(a);
-            //c.DeleteExpiredGroups(true).Wait();
-            c.GetUntaggedResourceGroups().Wait();
+
+            var az = Azure.Configure().Authenticate(new AzureCredentials(t, t, Tenant, AzureEnvironment.AzureGlobalCloud));//.WithSubscription(Subscription);
+            foreach (var sub in az.Subscriptions.ListAsync().Result)
+            {
+                //var a = az.WithSubscription(sub.SubscriptionId);
+                Console.WriteLine($"Connected to {sub.SubscriptionId}, searching...");
+                //var c = new Cleaner(a);
+                //c.DeleteExpiredGroups(true).Wait();
+                //c.GetUntaggedResourceGroups().Wait();
+            }
+
             Console.WriteLine("All finished");
             Console.ReadLine();
         }
@@ -74,7 +81,7 @@ namespace ExpirationHandler.ConsoleTest
             return groups;
         }
 
-        public async Task AddTagSuite()
+        public void AddTagSuite()
         {
             foreach (var g in _groups)
             {
@@ -131,7 +138,7 @@ namespace ExpirationHandler.ConsoleTest
             Console.Write($"Deleted {groups.Count} groups without {_key} tag. ");
         }
 
-        public async Task FindExpired(List<IResourceGroup> groupsThatExpire)
+        public void FindExpired(List<IResourceGroup> groupsThatExpire)
         {
 
             var def = Console.ForegroundColor;
