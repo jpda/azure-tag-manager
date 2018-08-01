@@ -22,16 +22,25 @@ namespace Azure.ExpirationHandler.Func
             dynamic data = JsonConvert.DeserializeObject(myQueueItem);
             var subscription = data.SubscriptionId.Value;
             var dateCreated = data.DateCreated.Value;
+            int.TryParse(config["ExpirationWindowInDays"], out int expirationWindowInDays);
 
-            if (_azr == null || _azr.SubscriptionId != subscription)
-            {
-                log.Info($"Created a new instance of _azr for subscription {subscription}");
-                _azr = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(new AzureCredentials(new MSILoginInformation(MSIResourceType.AppService), AzureEnvironment.AzureGlobalCloud)).WithSubscription(subscription);
-            }
-            SetTags(_azr, data.GroupName.Value, data.User.Value, dateCreated, log);
+            //todo: something is broken here
+            //log.Info($"{_azr}");
+            //if (_azr == null || _azr.SubscriptionId != subscription)
+            //{
+            log.Info($"Created a new instance of _azr for subscription {subscription}");
+            var azCredential = new AzureCredentials(new MSILoginInformation(MSIResourceType.AppService), AzureEnvironment.AzureGlobalCloud);
+            // todo: eww - should really find a better way to get the identity out of the IAzure interface
+            _azr = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(azCredential).WithSubscription(subscription);
+            //}
+            var group = data.GroupName.Value;
+            var user = data.User.Value ?? "unknown";
+            var expirationWindow = TimeSpan.FromDays(expirationWindowInDays);
+            log.Info($"starting: {group}, {user}, {dateCreated.ToString()}, {expirationWindow}");
+            SetTags(_azr, group, user, dateCreated.ToString(), expirationWindow, log);
         }
 
-        private static void SetTags(IAzure azr, string newResourceGroupName, string owner, string dateCreated, TraceWriter log)
+        private static void SetTags(IAzure azr, string newResourceGroupName, string owner, string dateCreated, TimeSpan expirationWindow, TraceWriter log, string identity = "azman")
         {
             var g = azr.ResourceGroups.GetByName(newResourceGroupName);
             var tags = new Dictionary<string, string>();
@@ -51,19 +60,20 @@ namespace Azure.ExpirationHandler.Func
                 var env = pieces[2];
                 var name = string.Join("-", pieces.Skip(3));
 
-                tags.Add("function", function);
-                tags.Add("customer", customer);
-                tags.Add("env", env);
-                tags.Add("thing", name);
-                tags.Add("owner", owner);
+                // todo: figure out a good way to map these oob so you can come up with your own nomenclature
+                tags.AddOrUpdate("function", function);
+                tags.AddOrUpdate("customer", customer);
+                tags.AddOrUpdate("env", env);
+                tags.AddOrUpdate("thing", name);
+                tags.AddOrUpdate("owner", owner);
+                tags.AddOrUpdate("tagged-by", identity ?? "azman");
             };
 
-            if (!tags.Any(x => x.Key == "expires")) //don't update/overwrite expiration tag if it exists
-            {
-                DateTime creationDate = DateTime.UtcNow;
-                DateTime.TryParse(dateCreated, out creationDate);
-                tags.Add("expires", creationDate.AddDays(30).ToString("o"));
-            }
+            DateTime creationDate = DateTime.UtcNow;
+            DateTime.TryParse(dateCreated, out creationDate);
+            //don't update/overwrite expiration tag if it exists
+            // todo: push tag key to configuration
+            tags.AddOrKeepExisting("expires", creationDate.Add(expirationWindow).ToString("o"));
 
             foreach (var a in tags)
             {
@@ -71,6 +81,25 @@ namespace Azure.ExpirationHandler.Func
             }
 
             g.Update().WithTags(tags).Apply();
+        }
+    }
+
+    public static class DictionaryExtensions
+    {
+        public static void AddOrUpdate<K, V>(this Dictionary<K, V> dict, K key, V val)
+        {
+            if (dict.ContainsKey(key))
+            {
+                dict[key] = val;
+                return;
+            }
+            dict.Add(key, val);
+        }
+
+        public static void AddOrKeepExisting<K, V>(this Dictionary<K, V> dict, K key, V val)
+        {
+            if (dict.ContainsKey(key)) return;
+            dict.Add(key, val);
         }
     }
 }
