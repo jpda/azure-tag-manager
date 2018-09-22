@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.ExpirationHandler.Fun
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.ExpirationHandler.Console", "Azure.ExpirationHandler.Console\Azure.ExpirationHandler.Console.csproj", "{735AF73F-A263-46AC-8C7B-3F54898A648F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.ExpirationHandler.Types", "Azure.ExpirationHandler.Types\Azure.ExpirationHandler.Types.csproj", "{516A9CBE-A196-46BA-AA74-4F57B0249A84}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.ExpirationHandler.Types", "Azure.ExpirationHandler.Types\Azure.ExpirationHandler.Types.csproj", "{516A9CBE-A196-46BA-AA74-4F57B0249A84}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

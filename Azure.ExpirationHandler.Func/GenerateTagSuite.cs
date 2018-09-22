@@ -7,6 +7,7 @@ using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Azure.ExpirationHandler.Func
@@ -16,7 +17,7 @@ namespace Azure.ExpirationHandler.Func
         private static IAzure _azr;
 
         [FunctionName("generate-tag-suite")]
-        public static void Run([QueueTrigger("generate-tag-suite", Connection = "QueueStorageAccount")]string myQueueItem, TraceWriter log, ExecutionContext context)
+        public static void Run([QueueTrigger("generate-tag-suite", Connection = "QueueStorageAccount")]string myQueueItem, ILogger log, ExecutionContext context)
         {
             var config = new ConfigurationBuilder().SetBasePath(context.FunctionAppDirectory).AddJsonFile("local.settings.json", optional: true, reloadOnChange: true).AddEnvironmentVariables().Build();
             dynamic data = JsonConvert.DeserializeObject(myQueueItem);
@@ -28,7 +29,7 @@ namespace Azure.ExpirationHandler.Func
             //log.Info($"{_azr}");
             //if (_azr == null || _azr.SubscriptionId != subscription)
             //{
-            log.Info($"Created a new instance of _azr for subscription {subscription}");
+            log.LogInformation($"Created a new instance of _azr for subscription {subscription}");
             var azCredential = new AzureCredentials(new MSILoginInformation(MSIResourceType.AppService), AzureEnvironment.AzureGlobalCloud);
             // todo: eww - should really find a better way to get the identity out of the IAzure interface
             _azr = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(azCredential).WithSubscription(subscription);
@@ -36,11 +37,11 @@ namespace Azure.ExpirationHandler.Func
             var group = data.GroupName.Value;
             var user = data.User.Value ?? "unknown";
             var expirationWindow = TimeSpan.FromDays(expirationWindowInDays);
-            log.Info($"starting: {group}, {user}, {dateCreated.ToString()}, {expirationWindow}");
+            log.LogInformation($"starting: {group}, {user}, {dateCreated.ToString()}, {expirationWindow}");
             SetTags(_azr, group, user, dateCreated.ToString(), expirationWindow, log);
         }
 
-        private static void SetTags(IAzure azr, string newResourceGroupName, string owner, string dateCreated, TimeSpan expirationWindow, TraceWriter log, string identity = "azman")
+        private static void SetTags(IAzure azr, string newResourceGroupName, string owner, string dateCreated, TimeSpan expirationWindow, ILogger log, string identity = "azman")
         {
             var g = azr.ResourceGroups.GetByName(newResourceGroupName);
             var tags = new Dictionary<string, string>();
@@ -54,7 +55,7 @@ namespace Azure.ExpirationHandler.Func
             var pieces = g.Name.Split('-');
             if (pieces.Length >= 4)
             {
-                log.Info($"Working on {g.Name}");
+                log.LogInformation($"Working on {g.Name}");
                 var function = pieces[0];
                 var customer = pieces[1];
                 var env = pieces[2];
@@ -77,7 +78,7 @@ namespace Azure.ExpirationHandler.Func
 
             foreach (var a in tags)
             {
-                log.Info($"{a.Key}: {a.Value}");
+                log.LogInformation($"{a.Key}: {a.Value}");
             }
 
             g.Update().WithTags(tags).Apply();

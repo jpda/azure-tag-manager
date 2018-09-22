@@ -6,6 +6,7 @@ using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 
@@ -14,14 +15,14 @@ namespace Azure.ExpirationHandler.Func
     public static class FindGroupsMissingTags
     {
         [FunctionName("find-groups-missing-tags")]
-        public static async Task RunAsync([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, TraceWriter log, ExecutionContext context, [Queue("generate-tag-suite", Connection = "QueueStorageAccount")]IAsyncCollector<string> outputQueueItem)
+        public static async Task RunAsync([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, ILogger log, ExecutionContext context, [Queue("generate-tag-suite", Connection = "QueueStorageAccount")]IAsyncCollector<string> outputQueueItem)
         {
             var config = new ConfigurationBuilder().SetBasePath(context.FunctionAppDirectory).AddJsonFile("local.settings.json", optional: true, reloadOnChange: true).AddEnvironmentVariables().Build();
             var expirationTagKey = config["ExpirationTagKey"];
             var azCredential = new AzureCredentials(new MSILoginInformation(MSIResourceType.AppService), AzureEnvironment.AzureGlobalCloud);
             var authenticatedStub = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(azCredential);
             var subList = await authenticatedStub.Subscriptions.ListAsync();
-            log.Info($"Found {subList.Count()} subscriptions: { string.Join(", ", subList.Select(x => x.SubscriptionId))}");
+            log.LogInformation($"Found {subList.Count()} subscriptions: { string.Join(", ", subList.Select(x => x.SubscriptionId))}");
 
             foreach (var s in subList)
             {
@@ -41,7 +42,7 @@ namespace Azure.ExpirationHandler.Func
                         azr.SubscriptionId,
                         DateCreated = DateTime.UtcNow
                     }));
-                    log.Info($"Sending {azr.SubscriptionId}: {g.Name} to tagging");
+                    log.LogInformation($"Sending {azr.SubscriptionId}: {g.Name} to tagging");
                 }
             }
         }
