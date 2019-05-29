@@ -34,7 +34,6 @@ namespace Azure.ExpirationHandler.Func
             {
                 _azr.ResourceGroups.BeginDeleteByName(resourceGroupName);
             }
-
         }
     }
 }
