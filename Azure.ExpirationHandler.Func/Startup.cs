@@ -24,6 +24,9 @@ namespace Azure.ExpirationHandler.Func
             var tenantId = config["TenantId"];
 
             builder.Services.AddLogging();
+            builder.Services.Configure<TaggingOptions>(config.GetSection("TaggingOptions"));
+            builder.Services.Configure<DeletionOptions>(config.GetSection("DeletionOptions"));
+
             builder.Services.AddSingleton<IAuthenticated>(x =>
             {
                 AzureCredentials creds;

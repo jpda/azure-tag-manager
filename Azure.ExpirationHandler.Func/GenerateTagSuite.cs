@@ -1,49 +1,49 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Azure.ExpirationHandler.Func;
+using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Azure.Management.Fluent;
-using Microsoft.Azure.Management.ResourceManager.Fluent;
-using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using static Microsoft.Azure.Management.Fluent.Azure;
+
+[assembly: FunctionsStartup(typeof(Startup))]
 
 namespace Azure.ExpirationHandler.Func
 {
-    public static class GenerateTagSuite
+    public class GenerateTagSuite : AzureAuthenticatedBase
     {
-        private static IAzure _azr;
+        private readonly TaggingOptions _options;
+
+        public GenerateTagSuite(IAuthenticated authenticatedStub, ILoggerFactory loggerFactory, IOptions<TaggingOptions> options) : base(authenticatedStub, loggerFactory)
+        {
+            _options = options.Value;
+        }
+
+        private IAzure _azr;
 
         [FunctionName("generate-tag-suite")]
-        public static void Run([QueueTrigger("generate-tag-suite", Connection = "QueueStorageAccount")]string myQueueItem, ILogger log, ExecutionContext context)
+        public void Run([QueueTrigger("generate-tag-suite", Connection = "QueueStorageAccount")]string myQueueItem)
         {
-            var config = new ConfigurationBuilder().SetBasePath(context.FunctionAppDirectory).AddJsonFile("local.settings.json", optional: true, reloadOnChange: true).AddEnvironmentVariables().Build();
             dynamic data = JsonConvert.DeserializeObject(myQueueItem);
             var subscription = data.SubscriptionId.Value;
             var dateCreated = data.DateCreated.Value;
-            int.TryParse(config["ExpirationWindowInDays"], out int expirationWindowInDays);
+            
+            _azr = _authenticatedStub.WithSubscription(subscription);
 
-            //todo: something is broken here
-            //log.Info($"{_azr}");
-            //if (_azr == null || _azr.SubscriptionId != subscription)
-            //{
-            log.LogInformation($"Created a new instance of _azr for subscription {subscription}");
-            var azCredential = new AzureCredentials(new MSILoginInformation(MSIResourceType.AppService), AzureEnvironment.AzureGlobalCloud);
-            // todo: eww - should really find a better way to get the identity out of the IAzure interface
-            _azr = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(azCredential).WithSubscription(subscription);
-            //}
             var group = data.GroupName.Value;
-            var user = data.User.Value ?? "unknown";
-            var expirationWindow = TimeSpan.FromDays(expirationWindowInDays);
-            log.LogInformation($"starting: {group}, {user}, {dateCreated.ToString()}, {expirationWindow}");
-            SetTags(_azr, group, user, dateCreated.ToString(), expirationWindow, log);
+            var user = data.User.Value ?? _options.DefaultOwner;
+            var expirationWindow = TimeSpan.FromDays(_options.ExpirationWindowInDays);
+            _log.LogInformation($"starting: {group}, {user}, {dateCreated.ToString()}, {expirationWindow}");
+            SetTags(group, user, dateCreated.ToString(), expirationWindow, _options.DefaultTaggedByName);
         }
 
-        private static void SetTags(IAzure azr, string newResourceGroupName, string owner, string dateCreated, TimeSpan expirationWindow, ILogger log, string identity = "azman")
+        private void SetTags(string newResourceGroupName, string owner, string dateCreated, TimeSpan expirationWindow, string identity)
         {
-            var g = azr.ResourceGroups.GetByName(newResourceGroupName);
+            var g = _azr.ResourceGroups.GetByName(newResourceGroupName);
             var tags = new Dictionary<string, string>();
             if (g.Tags != null)
             {
@@ -55,7 +55,7 @@ namespace Azure.ExpirationHandler.Func
             var pieces = g.Name.Split('-');
             if (pieces.Length >= 4)
             {
-                log.LogInformation($"Working on {g.Name}");
+                _log.LogInformation($"Working on {g.Name}");
                 var function = pieces[0];
                 var customer = pieces[1];
                 var env = pieces[2];
@@ -67,40 +67,20 @@ namespace Azure.ExpirationHandler.Func
                 tags.AddOrUpdate("env", env);
                 tags.AddOrUpdate("thing", name);
                 tags.AddOrUpdate("owner", owner);
-                tags.AddOrUpdate("tagged-by", identity ?? "azman");
+                tags.AddOrUpdate("tagged-by", identity);
             };
 
-            DateTime creationDate = DateTime.UtcNow;
+            var creationDate = DateTime.UtcNow;
             DateTime.TryParse(dateCreated, out creationDate);
-            //don't update/overwrite expiration tag if it exists
-            // todo: push tag key to configuration
-            tags.AddOrKeepExisting("expires", creationDate.Add(expirationWindow).ToString("o"));
+            // don't update/overwrite expiration tag if it exists
+            tags.AddOrKeepExisting(_options.ExpirationTagKey, creationDate.Add(expirationWindow).ToString("o"));
 
             foreach (var a in tags)
             {
-                log.LogInformation($"{a.Key}: {a.Value}");
+               _log.LogInformation($"{a.Key}: {a.Value}");
             }
 
             g.Update().WithTags(tags).Apply();
-        }
-    }
-
-    public static class DictionaryExtensions
-    {
-        public static void AddOrUpdate<K, V>(this Dictionary<K, V> dict, K key, V val)
-        {
-            if (dict.ContainsKey(key))
-            {
-                dict[key] = val;
-                return;
-            }
-            dict.Add(key, val);
-        }
-
-        public static void AddOrKeepExisting<K, V>(this Dictionary<K, V> dict, K key, V val)
-        {
-            if (dict.ContainsKey(key)) return;
-            dict.Add(key, val);
         }
     }
 }

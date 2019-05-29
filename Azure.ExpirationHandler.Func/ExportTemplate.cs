@@ -13,31 +13,24 @@ using Azure.ExpirationHandler.Func;
 
 namespace Azure.ExpirationHandler.Func
 {
-    public class ExportTemplate
+    public class ExportTemplate : AzureAuthenticatedBase
     {
-        private readonly IAuthenticated _authenticatedStub;
-        private readonly ILogger _logger;
+        public ExportTemplate(IAuthenticated auth, ILoggerFactory loggerFactory) : base(auth, loggerFactory) { }
 
-        public ExportTemplate(IAuthenticated auth, ILoggerFactory loggerFactory)
-        {
-            _authenticatedStub = auth;
-            _logger = loggerFactory.CreateLogger(this.GetType());
-        }
-
-        [FunctionName("ExportTemplate")]
+        [FunctionName("export-template")]
         public async Task Run([QueueTrigger("export-template", Connection = "ExportTemplateStorageQueueConnection")]string exportQueueItem, Binder binder)
         {
             dynamic data = JsonConvert.DeserializeObject(exportQueueItem);
             string rgName = data.ResourceGroupName.ToString();
             string subscriptionId = data.SubscriptionId.ToString();
 
-            var result = await Export(subscriptionId, rgName);
+            var azr = _authenticatedStub.WithSubscription(subscriptionId);
+            var exportResult = await azr.ResourceGroups.GetByName(rgName).ExportTemplateAsync(ResourceGroupExportTemplateOptions.IncludeBoth);
 
-            //var azr = _authenticatedStub.WithSubscription(subscriptionId);
-
-            //var exportResult = await azr.ResourceGroups.GetByName(rgName).ExportTemplateAsync(ResourceGroupExportTemplateOptions.IncludeBoth);
-
-            if (string.IsNullOrEmpty(result)) return;
+            if (exportResult.Error != null)
+            {
+                _log.LogError($"ExportTemplate error: {exportResult.Error.Code} {exportResult.Error.Message} at {exportResult.Error.Target}");
+            }
 
             var attributes = new Attribute[]
                {
@@ -47,23 +40,8 @@ namespace Azure.ExpirationHandler.Func
 
             using (var writer = await binder.BindAsync<TextWriter>(attributes).ConfigureAwait(false))
             {
-                writer.Write(result);
+                writer.Write(exportResult.TemplateJson);
             }
-        }
-
-        private async Task<string> Export(string subscriptionId, string rgName)
-        {
-            var azr = _authenticatedStub.WithSubscription(subscriptionId);
-
-            var exportResult = await azr.ResourceGroups.GetByName(rgName).ExportTemplateAsync(ResourceGroupExportTemplateOptions.IncludeBoth);
-
-            if (exportResult.Error != null)
-            {
-                _logger.LogError($"ExportTemplate error: {exportResult.Error.Code} {exportResult.Error.Message} at {exportResult.Error.Target}");
-                return string.Empty;
-            }
-
-            return exportResult.TemplateJson;
         }
     }
 }
