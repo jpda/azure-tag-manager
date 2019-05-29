@@ -13,10 +13,15 @@ using Newtonsoft.Json;
 
 namespace Azure.ExpirationHandler.Func
 {
-    public static class FindExpiredGroups
+    public class FindExpiredGroups
     {
+        public FindExpiredGroups()
+        {
+
+        }
+
         [FunctionName("find-expired-groups")]
-        public static async Task Run([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, ILogger log, [Queue("delete-resource-group", Connection = "QueueStorageAccount")]IAsyncCollector<string> expiredGroups, ExecutionContext context)
+        public async Task Run([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, ILogger log, [Queue("delete-resource-group", Connection = "QueueStorageAccount")]IAsyncCollector<string> expiredGroups, ExecutionContext context)
         {
             var config = new ConfigurationBuilder().SetBasePath(context.FunctionAppDirectory).AddJsonFile("local.settings.json", optional: true, reloadOnChange: true).AddEnvironmentVariables().Build();
             var expirationTagKey = config["ExpirationTagKey"];
