@@ -1,36 +1,42 @@
+using Azure.ExpirationHandler.Func;
+using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Azure.Management.Fluent;
-using Microsoft.Azure.Management.ResourceManager.Fluent;
-using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using static Microsoft.Azure.Management.Fluent.Azure;
+
+[assembly: FunctionsStartup(typeof(Startup))]
 
 namespace Azure.ExpirationHandler.Func
 {
-    public static class DeleteResourceGroup
+    public class DeleteResourceGroup : AzureAuthenticatedBase
     {
-        private static IAzure _azr;
+        private IAzure _azr;
+        private readonly bool _commit;
+
+        public DeleteResourceGroup(IAuthenticated auth, ILoggerFactory loggerFactory, IOptions<DeletionOptions> options) : base(auth, loggerFactory)
+        {
+            _commit = options.Value.Commit;
+        }
 
         [FunctionName("delete-resource-group")]
-        public static void Run([QueueTrigger("delete-resource-group", Connection = "QueueStorageAccount")]string myQueueItem, ILogger log, ExecutionContext context)
+        public void Run([QueueTrigger("delete-resource-group", Connection = "QueueStorageAccount")]string myQueueItem)
         {
-            log.LogInformation($"C# Queue trigger function processed: {myQueueItem}");
-            var config = new ConfigurationBuilder().SetBasePath(context.FunctionAppDirectory).AddJsonFile("local.settings.json", optional: true, reloadOnChange: true).AddEnvironmentVariables().Build();
             dynamic data = JsonConvert.DeserializeObject(myQueueItem);
             var subscription = data.SubscriptionId.Value;
             var resourceGroupName = data.ResourceGroupName.Value;
 
             if (_azr == null || _azr.SubscriptionId != subscription)
             {
-                log.LogInformation($"Created a new instance of _azr for subscription {subscription}");
-                _azr = Microsoft.Azure.Management.Fluent.Azure.Configure().Authenticate(new AzureCredentials(new MSILoginInformation(MSIResourceType.AppService), AzureEnvironment.AzureGlobalCloud)).WithSubscription(subscription);
+                _log.LogInformation($"Created a new instance of _azr for subscription {subscription}");
+                _azr = _authenticatedStub.WithSubscription(subscription);
             }
-            log.LogInformation($"Deleting resource group {resourceGroupName}");
+            _log.LogInformation($"Deleting resource group {resourceGroupName}");
 
-            bool.TryParse(config["delete-resource-group::Commit"], out bool commit);
-            log.LogInformation($"Commit: {commit}");
-            if (commit)
+            _log.LogInformation($"Commit: {_commit}");
+            if (_commit)
             {
                 _azr.ResourceGroups.BeginDeleteByName(resourceGroupName);
             }

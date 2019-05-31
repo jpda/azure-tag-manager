@@ -8,6 +8,8 @@ using Microsoft.Azure.WebJobs.Host;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.Functions.Extensions.DependencyInjection;
+using Azure.ExpirationHandler.Func;
 
 namespace Azure.ExpirationHandler.Func
 {
@@ -24,7 +26,7 @@ namespace Azure.ExpirationHandler.Func
                 return new BadRequestObjectResult("No root element");
             }
 
-            if(root.data.context.activityLog.subStatus.Value.ToString() != "Created") // activity log alerts are bogus - 'Create Resource Group' doesn't work so we have to check ourselves
+            if (root.data.context.activityLog.subStatus.Value.ToString() != "Created") // activity log alerts are bogus - 'Create Resource Group' doesn't work so we have to check ourselves
             {
                 return (ActionResult)new OkResult();
             }
