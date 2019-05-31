@@ -12,4 +12,10 @@ namespace Azure.ExpirationHandler.Types
         public string SubscriptionId { get; set; }
         public Dictionary<string, string> DesiredTags { get; set; }
     }
+
+    public class DeleteResourceGroupRequest
+    {
+        public string ResourceGroupName { get; set; }
+        public string SubscriptionId { get; set; }
+    }
 }
