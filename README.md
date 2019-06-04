@@ -1,5 +1,4 @@
 [![Build Status](https://dev.azure.com/jpda/azman/_apis/build/status/jpda.azure-tag-manager?branchName=master)](https://dev.azure.com/jpda/azman/_build/latest?definitionId=14&branchName=master)
-
 # azure-tag-manager
 
 Created to help me with resource sprawl. I have a mix of demo, poc, test and production stuff strewn about subscriptions and it's annoying to keep up with. Especially when the bill comes :/
