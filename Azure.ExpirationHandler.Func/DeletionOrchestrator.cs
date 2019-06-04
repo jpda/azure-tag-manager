@@ -4,14 +4,15 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.ExpirationHandler.Func;
-using Azure.ExpirationHandler.Types;
+using Azure.ExpirationHandler.Func.Models;
+using Azure.ExpirationHandler.Models;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
-using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.Graph.RBAC.Fluent.Models;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using static Microsoft.Azure.Management.Fluent.Azure;
 
 [assembly: FunctionsStartup(typeof(Startup))]
 
@@ -19,40 +20,40 @@ namespace Azure.ExpirationHandler.Func
 {
     public class DeletionOrchestrator : AzureAuthenticatedBase
     {
-        private IAzure _azr;
         private readonly DeletionOptions _options;
 
-        public DeletionOrchestrator(Microsoft.Azure.Management.Fluent.Azure.IAuthenticated auth, ILoggerFactory loggerFactory, IOptions<DeletionOptions> options) : base(auth, loggerFactory)
+        public DeletionOrchestrator(IAuthenticated auth, ILoggerFactory loggerFactory, IOptions<DeletionOptions> options) : base(auth, loggerFactory)
         {
             _options = options.Value;
         }
 
         [FunctionName("DeletionOrchestrator_QueueStart")]
-        public static async Task QueueStart([QueueTrigger("export-template", Connection = "ExportTemplateStorageQueueConnection")]DeleteResourceGroupRequest exportQueueItem, [OrchestrationClient]DurableOrchestrationClient starter, ILogger log)
+        public static async Task QueueStart([QueueTrigger("delete-resource-group", Connection = "QueueStorageAccount")] DeleteResourceGroupRequest deleteQueueItem, [OrchestrationClient] DurableOrchestrationClient starter, ILogger log)
         {
-            string instanceId = await starter.StartNewAsync("DeletionOrchestrator", exportQueueItem);
+            string instanceId = await starter.StartNewAsync("DeletionOrchestrator", deleteQueueItem);
             log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
         }
 
         [FunctionName("DeletionOrchestrator")]
-        public async Task RunOrchestrator([OrchestrationTrigger] DurableOrchestrationContext context, DeleteResourceGroupRequest data)
+        public async Task RunOrchestrator([OrchestrationTrigger] DurableOrchestrationContext context)
         {
+            var request = context.GetInput<DeleteResourceGroupRequest>();
             if (_options.ExportTemplateBeforeDeletion)
             {
-                var exportRequest = await context.CallActivityAsync<bool>("DeletionOrchestrator_ExportTemplate", data);
+                var exportRequest = await context.CallActivityAsync<bool>("DeletionOrchestrator_ExportTemplate", request);
                 if (!exportRequest && _options.RequireExport)
                 {
-                    _log.LogWarning($"Export failed for {data.ResourceGroupName} but export is required.");
+                    _log.LogWarning($"Export failed for {request.ResourceGroupName} but export is required.");
                     return;
                 }
             }
 
             if (_options.NotifyOnDeletion)
             {
-                await context.CallActivityAsync<DeleteResourceGroupRequest>("DeletionOrchestrator_NotifyOnDelete", data);
+                await context.CallActivityAsync("DeletionOrchestrator_NotifyOnDelete", request);
             }
 
-            var deletionRequest = await context.CallActivityAsync<DeleteResourceGroupRequest>("DeletionOrchestrator_DeleteResourceGroup", data);
+            var deletionRequest = await context.CallActivityAsync<DeleteResourceGroupRequest>("DeletionOrchestrator_DeleteResourceGroup", request);
         }
 
         [FunctionName("DeletionOrchestrator_ExportTemplate")]
@@ -82,7 +83,7 @@ namespace Azure.ExpirationHandler.Func
         }
 
         [FunctionName("DeletionOrchestrator_NotifyOnDelete")]
-        public async Task NotifyOnDelete([ActivityTrigger]DeleteResourceGroupRequest request)
+        public async Task NotifyOnDelete([ActivityTrigger]DeleteResourceGroupRequest request, [Queue("%OutboxQueueName%", Connection = "OutboxQueueConnection")]IAsyncCollector<List<MailInfo>> outboundMail)
         {
             var azr = _authenticatedStub.WithSubscription(request.SubscriptionId);
             var resourceGroup = azr.ResourceGroups.GetByName(request.ResourceGroupName);
@@ -108,6 +109,17 @@ namespace Azure.ExpirationHandler.Func
                     targets.Add(mail);
                 }
             }
+
+            // todo: templatize the mail, move it out entirely
+            var mailMessage = new MailInfo()
+            {
+                Subject = "The azman cometh",
+                To = targets,
+                BccAll = true,
+                MailBody = $"<h1>...and taketh away.<h1><h2>azman deletion pass at {DateTime.UtcNow.ToString("O")} deleted {request.ResourceGroupName} from subscription {request.SubscriptionId}.</h2><p>You're getting this notification as an owner of a child or parent resource.</p>"
+            };
+
+            await outboundMail.AddAsync(new List<MailInfo>() { mailMessage });
         }
 
         private string GetMailForPrincipal(string principalId)
@@ -115,22 +127,24 @@ namespace Azure.ExpirationHandler.Func
             try
             {
                 Console.ForegroundColor = ConsoleColor.Green;
-                var user = _azr.AccessManagement.ActiveDirectoryUsers.GetById(principalId);
+                var user = _authenticatedStub.ActiveDirectoryUsers.GetById(principalId);
                 return user.Mail;
             }
             catch (GraphErrorException ex)
             {
                 // if not found, search for SP and groups? not sure, since we wouldn't notify a service principal
+                // there's not a discernable way to figure out the type of principal first, without searching the graph outside of the management sdk
+                // although there might be an argument here for ditching this and just going to the graph on our own
                 if (ex.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
                     try
                     {
-                        var g = _azr.AccessManagement.ActiveDirectoryGroups.GetById(principalId);
+                        var g = _authenticatedStub.ActiveDirectoryGroups.GetById(principalId);
                         return g.Mail;
                     }
                     catch
                     {
-                        // toss, since it's an SP and we don't care about SPs
+                        // toss, since it's an SP and we don't care about SPs. not sure if we should even log this exception, although there may be other types of interest
                         _log.LogError(ex, ex.Message);
                         return string.Empty;
                     }
@@ -139,21 +153,15 @@ namespace Azure.ExpirationHandler.Func
             }
         }
 
-        [FunctionName("DeletionOrchestrator_Mailer")]
-        public void SendMail([ActivityTrigger]List<string> mail)
-        {
-
-        }
-
         [FunctionName("DeletionOrchestrator_DeleteResourceGroup")]
         public void DeleteResourceGroup([ActivityTrigger]DeleteResourceGroupRequest request)
         {
             var azr = _authenticatedStub.WithSubscription(request.SubscriptionId);
 
-            if (_azr == null || _azr.SubscriptionId != request.SubscriptionId)
+            if (azr == null || azr.SubscriptionId != request.SubscriptionId)
             {
                 _log.LogInformation($"Created a new instance of _azr for subscription {request.SubscriptionId}");
-                _azr = _authenticatedStub.WithSubscription(request.SubscriptionId);
+                azr = _authenticatedStub.WithSubscription(request.SubscriptionId);
             }
 
             _log.LogInformation($"Deleting resource group {request.ResourceGroupName}");
@@ -161,7 +169,7 @@ namespace Azure.ExpirationHandler.Func
 
             if (_options.Commit)
             {
-                _azr.ResourceGroups.BeginDeleteByName(request.ResourceGroupName);
+                azr.ResourceGroups.BeginDeleteByName(request.ResourceGroupName);
             }
         }
     }

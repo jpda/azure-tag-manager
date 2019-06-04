@@ -24,7 +24,7 @@ namespace Azure.ExpirationHandler.Func
         }
 
         [FunctionName("find-groups-missing-tags")]
-        public async Task FindMissing([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, ILogger log, ExecutionContext context, [Queue("generate-tag-suite", Connection = "QueueStorageAccount")]IAsyncCollector<string> outputQueueItem)
+        public async Task FindMissing([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, ILogger log, [Queue("generate-tag-suite", Connection = "QueueStorageAccount")]IAsyncCollector<string> outputQueueItem)
         {
             var subList = await _authenticatedStub.Subscriptions.ListAsync();
             log.LogInformation($"Found {subList.Count()} subscriptions: { string.Join(", ", subList.Select(x => x.SubscriptionId))}");
