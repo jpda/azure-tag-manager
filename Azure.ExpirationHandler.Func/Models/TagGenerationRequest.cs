@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Azure.ExpirationHandler.Types
+namespace Azure.ExpirationHandler.Models
 {
     public class TagGenerationRequest
     {
