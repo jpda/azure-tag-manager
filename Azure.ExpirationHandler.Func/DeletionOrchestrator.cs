@@ -70,7 +70,7 @@ namespace Azure.ExpirationHandler.Func
 
             var attributes = new Attribute[]
                {
-                    new BlobAttribute($"templates/{DateTime.UtcNow.ToString("yyyy-MM-dd")}/{request.ResourceGroupName}.json"),
+                    new BlobAttribute($"{_options.PersistenceStorageContainer}/{DateTime.UtcNow.ToString("yyyy-MM-dd")}/{request.ResourceGroupName}.json"),
                     new StorageAccountAttribute("ExportTemplateBlobStorageConnection")
                };
 
@@ -83,7 +83,7 @@ namespace Azure.ExpirationHandler.Func
         }
 
         [FunctionName("DeletionOrchestrator_NotifyOnDelete")]
-        public async Task NotifyOnDelete([ActivityTrigger]DeleteResourceGroupRequest request, [Queue("%OutboxQueueName%", Connection = "OutboxQueueConnection")]IAsyncCollector<List<MailInfo>> outboundMail)
+        public async Task NotifyOnDelete([ActivityTrigger]DeleteResourceGroupRequest request, [Queue("%OutboxQueueName%", Connection = "OutboxQueueConnection")]IAsyncCollector<MailInfo> outboundMail)
         {
             var azr = _authenticatedStub.WithSubscription(request.SubscriptionId);
             var resourceGroup = azr.ResourceGroups.GetByName(request.ResourceGroupName);
@@ -113,13 +113,12 @@ namespace Azure.ExpirationHandler.Func
             // todo: templatize the mail, move it out entirely
             var mailMessage = new MailInfo()
             {
-                Subject = "The azman cometh",
+                Subject = "The azman cometh...",
                 To = targets,
-                BccAll = true,
-                MailBody = $"<h1>...and taketh away.<h1><h2>azman deletion pass at {DateTime.UtcNow.ToString("O")} deleted {request.ResourceGroupName} from subscription {request.SubscriptionId}.</h2><p>You're getting this notification as an owner of a child or parent resource.</p>"
+                MailBody = $"<h1>...and taketh away.</h1><h2>azman deletion pass at {DateTime.UtcNow.ToString("O")} deleted {request.ResourceGroupName} from subscription {request.SubscriptionId}.</h2><p>You're getting this notification as an owner of a child or parent resource.</p>"
             };
 
-            await outboundMail.AddAsync(new List<MailInfo>() { mailMessage });
+            await outboundMail.AddAsync(mailMessage);
         }
 
         private string GetMailForPrincipal(string principalId)

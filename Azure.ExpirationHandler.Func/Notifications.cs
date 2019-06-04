@@ -15,10 +15,7 @@ namespace Azure.ExpirationHandler.Func
         public async Task SendMail([QueueTrigger("%OutboxQueueName%", Connection = "OutboxQueueConnection")] MailInfo mail, [SendGrid(ApiKey = "SendGridApiKey")] IAsyncCollector<SendGridMessage> outbox)
         {
             var message = new SendGridMessage();
-            if (mail.BccAll)
-            {
-                message.AddBccs(mail.To.Select(x => new EmailAddress(x)).ToList());
-            }
+            message.AddTos(mail.To.Select(x => new EmailAddress(x)).ToList());
             message.SetFrom(new EmailAddress("notify@azman.io", "azman.io notify"));
 
             message.AddContent("text/html", mail.MailBody);
