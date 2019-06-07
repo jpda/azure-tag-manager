@@ -18,9 +18,6 @@ namespace Azure.ExpirationHandler.Func
         {
             var config = new ConfigurationBuilder().SetBasePath(Environment.CurrentDirectory).AddJsonFile("local.settings.json", optional: true, reloadOnChange: true).AddEnvironmentVariables().Build();
 
-            //this is so lame
-            var tenantId = config["TenantId"];
-
             builder.Services.AddLogging();
             builder.Services.Configure<TaggingOptions>(config.GetSection("TaggingOptions"));
             builder.Services.Configure<DeletionOptions>(config.GetSection("DeletionOptions"));
@@ -34,6 +31,8 @@ namespace Azure.ExpirationHandler.Func
                 }
                 else
                 {
+                    //this is so lame
+                    var tenantId = config["TenantId"];
                     var tokenProvider = new AzureServiceTokenProvider();
                     var armToken = tokenProvider.GetAccessTokenAsync("https://management.azure.com", tenantId).Result;
                     var graphToken = tokenProvider.GetAccessTokenAsync("https://graph.microsoft.com", tenantId).Result;
