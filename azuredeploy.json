@@ -1,0 +1,258 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "region":{
+            "defaultValue": "East US",
+            "type": "string",
+            "allowedValues": [
+                "East US",
+                "East US 2",
+                "West US",
+                "West US 2",
+                "Central US",
+                "South Central US",
+                "North Central US",
+                "West Central US"
+            ]
+        },
+        "functionappName": {
+            "defaultValue": "GEN-UNIQUE",
+            "type": "string"
+        },
+        "appInsightsName": {
+            "type": "string",
+            "defaultValue": "appInsightsInstance"
+        },
+        "appInsightsLocation": {
+            "type": "string",
+            "defaultValue": "East US",
+            "allowedValues": [
+                "North Europe",
+                "West Europe",
+                "East US",
+                "West US 2",
+                "South Central US",
+                "Southeast Asia"
+            ]
+        },
+        "appSvcPlanName": {
+            "defaultValue": "AzureTagManagerASP",
+            "type": "string"
+        },
+        "actionGroupSubIDScope":{
+            "defaultValue": "[subscription().subscriptionId]",
+            "type": "string"
+        },
+        "actionGroupsNewRGTaggingName": {
+            "defaultValue": "new-resource-group-tagging",
+            "type": "string"
+        },
+        "activityLogAlertsNewRGCreatedName": {
+            "defaultValue": "New resource group created",
+            "type": "string"
+        },
+        "githubRepoURL": {
+            "type": "string",
+            "defaultValue": "https://github.com/jpda/azure-tag-manager.git"
+        },
+        "githubRepoBranch": {
+            "type": "string",
+            "defaultValue": "master"
+        }
+    },
+    "variables": {
+        "storageAccount_name":"[toLower( concat( parameters('functionappName'),'stg', substring(uniqueString(resourceGroup().id),0,3) ) )]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-04-01",
+            "name": "[variables('storageAccount_name')]",
+            "location": "[parameters('region')]",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "kind": "Storage",
+            "properties": {
+                "networkAcls": {
+                    "bypass": "AzureServices",
+                    "virtualNetworkRules": [],
+                    "ipRules": [],
+                    "defaultAction": "Allow"
+                },
+                "supportsHttpsTrafficOnly": false,
+                "encryption": {
+                    "services": {
+                        "file": {
+                            "enabled": true
+                        },
+                        "blob": {
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Insights/components",
+            "apiVersion": "2015-05-01",
+            "name": "[parameters('appInsightsName')]",
+            "location": "[parameters('appInsightsLocation')]",
+            "tags": {},
+            "kind": "web",
+            "properties": {
+                "Application_Type": "web",
+                "Request_Source": "IbizaWebAppExtensionCreate"
+            }
+        },
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2016-09-01",
+            "name": "[parameters('appSvcPlanName')]",
+            "location": "[parameters('region')]",
+            "sku": {
+                "name": "Y1",
+                "tier": "Dynamic",
+                "size": "Y1",
+                "family": "Y",
+                "capacity": 0
+            },
+            "kind": "functionapp",
+            "properties": {
+                "name": "[parameters('appSvcPlanName')]",
+                "perSiteScaling": false,
+                "reserved": false,
+                "targetWorkerCount": 0,
+                "targetWorkerSizeId": 0
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2016-08-01",
+            "name": "[parameters('functionappName')]",
+            "location": "[parameters('region')]",
+            "kind": "functionapp",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', parameters('appSvcPlanName'))]",
+                "[resourceId('Microsoft.Insights/components', parameters('appInsightsName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccount_name'))]"
+            ],
+            "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appSvcPlanName'))]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                            "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2015-05-01').InstrumentationKey]"
+                        },
+                        {
+                            "name": "FUNCTIONS_EXTENSION_VERSION",
+                            "value": "~2"
+                        }
+    
+                    ]
+                }
+            },
+            "resources": [
+                {
+                    "apiVersion": "2016-08-01",
+                    "name": "web",
+                    "type": "sourcecontrols",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/sites', parameters('functionappName'))]"
+                    ],
+                    "properties": {
+                        "RepoUrl": "[parameters('githubRepoURL')]",
+                        "branch": "[parameters('githubRepoBranch')]",
+                        "IsManualIntegration": true
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Web/sites/hostNameBindings",
+            "apiVersion": "2016-08-01",
+            "name": "[concat(parameters('functionappName'), '/', parameters('functionappName'), '.azurewebsites.net')]",
+            "location": "[parameters('region')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('functionappName'))]"
+            ],
+            "properties": {
+                "siteName": "[parameters('functionappName')]"
+            }
+        },
+        {
+            "type": "Microsoft.Insights/actionGroups",
+            "apiVersion": "2019-03-01",
+            "name": "[parameters('actionGroupsNewRGTaggingName')]",
+            "location": "Global",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('functionappName'))]"
+            ],
+            "properties": {
+                "groupShortName": "newrgtag",
+                "enabled": true,
+                "emailReceivers": [],
+                "smsReceivers": [],
+                "webhookReceivers": [],
+                "itsmReceivers": [],
+                "azureAppPushReceivers": [],
+                "automationRunbookReceivers": [],
+                "voiceReceivers": [],
+                "logicAppReceivers": [],
+                "azureFunctionReceivers": [
+                    {
+                        "name": "tagging-func",
+                        "functionAppResourceId": "[resourceId('Microsoft.Web/sites', parameters('functionappName'))]",
+                        "functionName": "webhook-rg-created",
+                        "httpTriggerUrl": "[concat('https://', parameters('functionappName'), '.azurewebsites.net/api/webhook-rg-created')]",
+                        "useCommonAlertSchema": false
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Insights/activityLogAlerts",
+            "apiVersion": "2017-04-01",
+            "name": "[parameters('activityLogAlertsNewRGCreatedName')]",
+            "location": "Global",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/actionGroups', parameters('actionGroupsNewRGTaggingName'))]"
+            ],
+            "properties": {
+                "scopes": [
+                    "[concat('/subscriptions/', parameters('actionGroupSubIDScope'))]"
+                ],
+                "condition": {
+                    "allOf": [
+                        {
+                            "field": "category",
+                            "equals": "Administrative"
+                        },
+                        {
+                            "field": "operationName",
+                            "equals": "Microsoft.Resources/subscriptions/resourceGroups/write"
+                        },
+                        {
+                            "field": "status",
+                            "equals": "Succeeded"
+                        }
+                    ]
+                },
+                "actions": {
+                    "actionGroups": [
+                        {
+                            "actionGroupId": "[resourceId('microsoft.insights/actionGroups', parameters('actionGroupsNewRGTaggingName'))]",
+                            "webhookProperties": {}
+                        }
+                    ]
+                },
+                "enabled": true,
+                "description": "Tags resource groups after creation"
+            }
+        }
+    ]
+}
