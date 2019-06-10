@@ -3,6 +3,7 @@ using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Rest;
 using System;
@@ -16,7 +17,7 @@ namespace Azure.ExpirationHandler.Func
 
         public override void Configure(IFunctionsHostBuilder builder)
         {
-            var config = new ConfigurationBuilder().SetBasePath(Environment.CurrentDirectory).AddJsonFile("local.settings.json", optional: true, reloadOnChange: true).AddEnvironmentVariables().Build();
+            var config = new ConfigurationBuilder().SetBasePath(Environment.CurrentDirectory).AddEnvironmentVariables().AddAzureAppConfiguration(Environment.GetEnvironmentVariable("AZMAN-AAC-CONNECTION"), optional: true).Build();
 
             builder.Services.AddLogging();
             builder.Services.Configure<TaggingOptions>(config.GetSection("TaggingOptions"));
