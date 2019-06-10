@@ -3,11 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.28714.193
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.ExpirationHandler.Func", "Azure.ExpirationHandler.Func\Azure.ExpirationHandler.Func.csproj", "{34A808FB-4B9B-4A2D-9A3C-77F8F45985DF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.ExpirationHandler.Func", "src/Azure.ExpirationHandler.Func\Azure.ExpirationHandler.Func.csproj", "{34A808FB-4B9B-4A2D-9A3C-77F8F45985DF}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "stuff", "stuff", "{722AAC28-78CC-4575-83EF-C6A92BA543F7}"
 	ProjectSection(SolutionItems) = preProject
+		azman-tag-sample.png = azman-tag-sample.png
 		azure-pipelines.yml = azure-pipelines.yml
+		azuredeploy.json = azuredeploy.json
+		LICENSE = LICENSE
 		README.md = README.md
 	EndProjectSection
 EndProject
