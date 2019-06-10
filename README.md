@@ -9,7 +9,7 @@ Timer driven functions run at the top of the hour and iterate through all availa
 
 Created to help me with resource sprawl. I have a mix of demo, poc, test and production stuff strewn about subscriptions and it's annoying to keep up with...especially when the bill comes :moneybag: I started with Azure Policy, but found I couldn't do evaluations (like created time + 30 days), so decided to build my own tagger.
 
-[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fjpda%2Fazure-tag-manager%2Fmaster%2Fazuredeploy.json)
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fjpda%2Fazure-tag-manager%2Fmaster%2Fdeploy%2Fazuredeploy.json)
 
 ## Current functionality
 - [Webhook](/jpda/azure-tag-manager/blob/master/Azure.ExpirationHandler.Func/WebhookResourceGroupCreated.cs) receives notification from Azure Monitor that a new resource group has been created

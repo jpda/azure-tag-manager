@@ -62,7 +62,8 @@
         }
     },
     "variables": {
-        "storageAccount_name":"[toLower( concat( parameters('functionappName'),'stg', substring(uniqueString(resourceGroup().id),0,3) ) )]"
+        "storageAccount_name":"[toLower( concat( parameters('functionappName'),'stg', substring(uniqueString(resourceGroup().id),0,3) ) )]",
+        "storageAccountId": "[concat(resourceGroup().id,'/providers/Microsoft.Storage/storageAccounts/', variables('storageAccount_Name'))]"
     },
     "resources": [
         {
@@ -151,8 +152,47 @@
                         {
                             "name": "FUNCTIONS_EXTENSION_VERSION",
                             "value": "~2"
+                        },
+                        {
+                            "name": "FUNCTIONS_WORKER_RUNTIME",
+                            "value": "dotnet"
+                        },
+                        {
+                            "name": "SendGridKey",
+                            "value": "GEN-UNIQUE"
+                        },
+                        {
+                            "name": "AZMAN-AAC-CONNECTION",
+                            "value": ""
+                        },
+                        {
+                            "name": "AzureWebJobsStorage",
+                            "value": ""
+                        },
+                        {
+                            "name": "TaggingQueueStorageAccount",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccount_name'),';AccountKey=',concat(listKeys(variables('storageAccountId'),'2015-05-01-preview').key1))]"
+                        },
+                        {
+                            "name": "TaggingQueueName",
+                            "value": "generate-tag-suite"
+                        },
+                        {
+                            "name": "DeleteQueueStorageAccount",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccount_name'),';AccountKey=',concat(listKeys(variables('storageAccountId'),'2015-05-01-preview').key1))]"
+                        },
+                        {
+                            "name": "DeleteResourceGroupQueueName",
+                            "value": "delete-resource-group"
+                        },
+                        {
+                            "name": "OutboxQueueStorageAccount",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccount_name'),';AccountKey=',concat(listKeys(variables('storageAccountId'),'2015-05-01-preview').key1))]"
+                        },
+                        {
+                            "name": "OutboxQueueName",
+                            "value": "mailer-outbox"
                         }
-    
                     ]
                 }
             },
