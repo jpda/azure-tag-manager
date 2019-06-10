@@ -2,8 +2,10 @@
 
 # azure-tag-manager :cloud: :zap:
 
-## :warning: Running locally will use *your user account* which may have more access than your production service principal/MSI.
+### :warning: Running locally will use *your user account* which may have more access than your production service principal/MSI. :warning:
 Timer driven functions run at the top of the hour and iterate through all available subscriptions, so keep in mind that you may end up with resources tagged with an `expires` tag. Just delete the tag if you don't want it, but as of now there is no explicit white or blacklist for subscriptions, it is driven by principal access.
+
+---
 
 Created to help me with resource sprawl. I have a mix of demo, poc, test and production stuff strewn about subscriptions and it's annoying to keep up with...especially when the bill comes :moneybag: I started with Azure Policy, but found I couldn't do evaluations (like created time + 30 days), so decided to build my own tagger.
 
@@ -70,6 +72,8 @@ These are mostly related to bindings. You can use different storage accounts for
 "OutboxQueueName": "mailer-outbox", 
 // sendgrid key for sending mail
 "SendGridKey": ""
+// App Configuration connection string
+"AZMAN-AAC-CONNECTION": "AAC connection string"
 ```
 
 ### Azure App Configuration settings:
