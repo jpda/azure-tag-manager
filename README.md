@@ -31,7 +31,7 @@ For a sample resource group, named `service-msft-prod-azman-main-compute`:
 
 When tagging is finished, it looks like this:
 
-![sample tags](https://github.com/jpda/azure-tag-manager/raw/master/azman-tag-sample.png "sample tags")
+![sample tags](https://github.com/jpda/azure-tag-manager/raw/master/docs/azman-tag-sample.png "sample tags")
 
 ## Notifications
 todo
