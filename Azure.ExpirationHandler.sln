@@ -8,6 +8,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "stuff", "stuff", "{722AAC28-78CC-4575-83EF-C6A92BA543F7}"
 	ProjectSection(SolutionItems) = preProject
 		azure-pipelines.yml = azure-pipelines.yml
+		azuredeploy.json = azuredeploy.json
+		LICENSE = LICENSE
 		README.md = README.md
 	EndProjectSection
 EndProject
