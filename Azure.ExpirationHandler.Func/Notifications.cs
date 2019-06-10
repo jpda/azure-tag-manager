@@ -27,8 +27,6 @@ namespace Azure.ExpirationHandler.Func
         [FunctionName("Texter")]
         public async Task SendSms(List<string> targets, IAsyncCollector<CreateMessageOptions> outbox)
         {
-
-
             // You must initialize the CreateMessageOptions variable with the "To" phone number.
             //CreateMessageOptions smsText = new CreateMessageOptions(new PhoneNumber("+1704XXXXXXX"));
 

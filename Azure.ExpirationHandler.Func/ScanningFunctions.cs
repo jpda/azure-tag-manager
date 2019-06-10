@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Microsoft.Extensions.Options;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Azure.ExpirationHandler.Func;
+using Azure.ExpirationHandler.Func.Models;
 
 [assembly: FunctionsStartup(typeof(Startup))]
 
@@ -46,6 +47,32 @@ namespace Azure.ExpirationHandler.Func
                         DateCreated = DateTime.UtcNow
                     }));
                     log.LogInformation($"Sending {azr.SubscriptionId}: {g.Name} to tagging");
+                }
+            }
+        }
+
+        [FunctionName("notify-upcoming")]
+        public async Task FindUpcoming([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, [Queue("%OutboxQueueName%", Connection = "OutboxQueueConnection")]IAsyncCollector<MailInfo> outboundMail)
+        {
+            var subList = await _authenticatedStub.Subscriptions.ListAsync();
+            _log.LogInformation($"Found {subList.Count()} subscriptions: { string.Join(", ", subList.Select(x => x.SubscriptionId))}");
+            foreach (var s in subList)
+            {
+                try
+                {
+                    var azr = _authenticatedStub.WithSubscription(s.SubscriptionId);
+                    var groupResponse = await azr.ResourceGroups.ListAsync(true);
+                    var groupsUpcomingDeletion = groupResponse.Where(x => x.Tags != null && x.Tags.ContainsKey(_expirationTagKey) && DateTime.Parse(x.Tags[_expirationTagKey]) < DateTime.UtcNow.AddDays(-7)).ToList();
+
+                    foreach (var g in groupsUpcomingDeletion.Select(x => new { azr.SubscriptionId, ResourceGroupName = x.Name, ExpirationDate = x.Tags[_expirationTagKey] }))
+                    {
+                        _log.LogInformation($"RG {g.ResourceGroupName} scheduled for deletion; expires on {g.ExpirationDate}");
+                        await outboundMail.AddAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.LogError(ex.Message, ex);
                 }
             }
         }
