@@ -2,7 +2,7 @@
 
 # azure-tag-manager :cloud: :zap:
 
-#### :warning: Running locally will use *your user account* which may have more access than your production service principal/MSI. :warning:
+#### :warning: Running locally will use *your user account* which may have more access than your production service principal/MSI.
 Timer driven functions run at the top of the hour and iterate through all available subscriptions, so keep in mind that you may end up with resources tagged with an `expires` tag. Just delete the tag if you don't want it, but as of now there is no explicit white or blacklist for subscriptions, it is driven by principal access.
 
 ---
