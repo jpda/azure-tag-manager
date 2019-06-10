@@ -162,6 +162,10 @@
                             "value": "GEN-UNIQUE"
                         },
                         {
+                            "name": "AZMAN-AAC-CONNECTION",
+                            "value": ""
+                        },
+                        {
                             "name": "AzureWebJobsStorage",
                             "value": ""
                         },
