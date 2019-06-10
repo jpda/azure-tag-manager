@@ -11,7 +11,7 @@ jobs:
       inputs:
         command: publish
         arguments: '--configuration Release --output ../publish_output'
-        projects: '*Func/*.csproj'
+        projects: 'src/*Func/*.csproj'
         publishWebProjects: false
         modifyOutputPath: true
         zipAfterPublish: false
