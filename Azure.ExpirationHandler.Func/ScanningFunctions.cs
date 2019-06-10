@@ -25,7 +25,7 @@ namespace Azure.ExpirationHandler.Func
         }
 
         [FunctionName("find-groups-missing-tags")]
-        public async Task FindMissing([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, ILogger log, [Queue("generate-tag-suite", Connection = "QueueStorageAccount")]IAsyncCollector<string> outputQueueItem)
+        public async Task FindMissing([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, ILogger log, [Queue("%TaggingQueueName%", Connection = "TaggingQueueStorageAccount")]IAsyncCollector<string> outputQueueItem)
         {
             var subList = await _authenticatedStub.Subscriptions.ListAsync();
             log.LogInformation($"Found {subList.Count()} subscriptions: { string.Join(", ", subList.Select(x => x.SubscriptionId))}");
@@ -52,7 +52,7 @@ namespace Azure.ExpirationHandler.Func
         }
 
         [FunctionName("notify-upcoming")]
-        public async Task FindUpcoming([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, [Queue("%OutboxQueueName%", Connection = "OutboxQueueConnection")]IAsyncCollector<MailInfo> outboundMail)
+        public async Task FindUpcoming([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, [Queue("%OutboxQueueName%", Connection = "OutboxQueueStorageAccount")]IAsyncCollector<MailInfo> outboundMail)
         {
             var subList = await _authenticatedStub.Subscriptions.ListAsync();
             _log.LogInformation($"Found {subList.Count()} subscriptions: { string.Join(", ", subList.Select(x => x.SubscriptionId))}");
@@ -67,7 +67,7 @@ namespace Azure.ExpirationHandler.Func
                     foreach (var g in groupsUpcomingDeletion.Select(x => new { azr.SubscriptionId, ResourceGroupName = x.Name, ExpirationDate = x.Tags[_expirationTagKey] }))
                     {
                         _log.LogInformation($"RG {g.ResourceGroupName} scheduled for deletion; expires on {g.ExpirationDate}");
-                        await outboundMail.AddAsync();
+                        await outboundMail.AddAsync(null);
                     }
                 }
                 catch (Exception ex)
@@ -78,7 +78,7 @@ namespace Azure.ExpirationHandler.Func
         }
 
         [FunctionName("find-expired-groups")]
-        public async Task FindExpired([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, [Queue("delete-resource-group", Connection = "QueueStorageAccount")]IAsyncCollector<string> expiredGroups)
+        public async Task FindExpired([TimerTrigger("0 0 * * * *")]TimerInfo myTimer, [Queue("%DeleteResourceGroupQueueName%", Connection = "DeleteQueueStorageAccount")]IAsyncCollector<string> expiredGroups)
         {
             var subList = await _authenticatedStub.Subscriptions.ListAsync();
             _log.LogInformation($"Found {subList.Count()} subscriptions: { string.Join(", ", subList.Select(x => x.SubscriptionId))}");

@@ -26,7 +26,7 @@ namespace Azure.ExpirationHandler.Func
         private IAzure _azr;
 
         [FunctionName("generate-tag-suite")]
-        public void Run([QueueTrigger("generate-tag-suite", Connection = "QueueStorageAccount")]string myQueueItem)
+        public void Run([QueueTrigger("%TaggingQueueName%", Connection = "TaggingQueueStorageAccount")]string myQueueItem)
         {
             dynamic data = JsonConvert.DeserializeObject(myQueueItem);
             var subscription = data.SubscriptionId.Value;

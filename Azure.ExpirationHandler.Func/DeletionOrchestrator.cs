@@ -28,7 +28,7 @@ namespace Azure.ExpirationHandler.Func
         }
 
         [FunctionName("DeletionOrchestrator_QueueStart")]
-        public static async Task QueueStart([QueueTrigger("delete-resource-group", Connection = "QueueStorageAccount")] DeleteResourceGroupRequest deleteQueueItem, [OrchestrationClient] DurableOrchestrationClient starter, ILogger log)
+        public static async Task QueueStart([QueueTrigger("%DeleteResourceGroupQueueName%", Connection = "DeleteQueueStorageAccount")] DeleteResourceGroupRequest deleteQueueItem, [OrchestrationClient] DurableOrchestrationClient starter, ILogger log)
         {
             string instanceId = await starter.StartNewAsync("DeletionOrchestrator", deleteQueueItem);
             log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
@@ -83,7 +83,7 @@ namespace Azure.ExpirationHandler.Func
         }
 
         [FunctionName("DeletionOrchestrator_NotifyOnDelete")]
-        public async Task NotifyOnDelete([ActivityTrigger]DeleteResourceGroupRequest request, [Queue("%OutboxQueueName%", Connection = "OutboxQueueConnection")]IAsyncCollector<MailInfo> outboundMail)
+        public async Task NotifyOnDelete([ActivityTrigger]DeleteResourceGroupRequest request, [Queue("%OutboxQueueName%", Connection = "OutboxQueueStorageAccount")]IAsyncCollector<MailInfo> outboundMail)
         {
             var azr = _authenticatedStub.WithSubscription(request.SubscriptionId);
             var resourceGroup = azr.ResourceGroups.GetByName(request.ResourceGroupName);

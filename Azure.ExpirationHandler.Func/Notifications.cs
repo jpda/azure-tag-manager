@@ -12,7 +12,7 @@ namespace Azure.ExpirationHandler.Func
     public class Notifications
     {
         [FunctionName("Mailer")]
-        public async Task SendMail([QueueTrigger("%OutboxQueueName%", Connection = "OutboxQueueConnection")] MailInfo mail, [SendGrid(ApiKey = "SendGridApiKey")] IAsyncCollector<SendGridMessage> outbox)
+        public async Task SendMail([QueueTrigger("%OutboxQueueName%", Connection = "OutboxQueueStorageAccount")] MailInfo mail, [SendGrid(ApiKey = "SendGridApiKey")] IAsyncCollector<SendGridMessage> outbox)
         {
             var message = new SendGridMessage();
             message.AddTos(mail.To.Select(x => new EmailAddress(x)).ToList());

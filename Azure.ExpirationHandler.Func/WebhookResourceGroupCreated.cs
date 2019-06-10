@@ -13,7 +13,7 @@ namespace Azure.ExpirationHandler.Func
     public static class WebhookResourceGroupCreated
     {
         [FunctionName("webhook-rg-created")]
-        public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]HttpRequest req, ILogger log, [Queue("generate-tag-suite", Connection = "QueueStorageAccount")]IAsyncCollector<string> outputQueueItem)
+        public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]HttpRequest req, ILogger log, [Queue("%TaggingQueueName%", Connection = "TaggingQueueStorageAccount")]IAsyncCollector<string> outputQueueItem)
         {
             string requestBody = new StreamReader(req.Body).ReadToEnd();
             dynamic root = JsonConvert.DeserializeObject(requestBody);
