@@ -25,11 +25,18 @@ For a sample resource group, named `service-msft-prod-azman-main-compute`:
 | 2           | `env`     | `prod`              | Environment, so I can apply certain policy to certain groups
 | *remaining* | `thing`   | `azman-main-compute`| Whatever the thing actually is
 
-When done, it looks like this:
+When tagging is finished, it looks like this:
 
-![sample tags](https://github.com/jpda/azure-tag-manager/raw/master/src/azman-tag-sample.png "sample tags")
+![sample tags](https://github.com/jpda/azure-tag-manager/raw/master/azman-tag-sample.png "sample tags")
 
-## Adds tags based on resource group naming nomenclature
-- Driven by Azure Monitor: whenever a new resource group is created, a webhook calls the webhook-rg-created function, which parses the hook and queues up a message to the tagger.
-- Expiration tag is added to default to now + 30 days. 
-- Tagger splits name and creates tags based on positional parameters (this could probably be better)
+## Notifications
+todo
+
+## Template export
+todo
+
+## Deployment
+todo
+
+## MSI & authentication considerations
+todo
