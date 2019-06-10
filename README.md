@@ -76,7 +76,7 @@ These are mostly related to bindings. You can use different storage accounts for
 "AZMAN-AAC-CONNECTION": "AAC connection string"
 ```
 
-### Azure App Configuration settings:
+### Azure App Configuration
 These are related to behavior configuration and not tied to Azure. As this gets refactored out more it will be make more sense to have them split.
 
 ```
