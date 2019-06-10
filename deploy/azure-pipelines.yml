@@ -10,7 +10,7 @@ jobs:
     - task: DotNetCoreCLI@2
       inputs:
         command: publish
-        arguments: '--configuration Release --output ../publish_output'
+        arguments: '--configuration Release --output ../../publish_output'
         projects: 'src/*Func/*.csproj'
         publishWebProjects: false
         modifyOutputPath: true

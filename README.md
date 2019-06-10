@@ -47,7 +47,49 @@ todo
 todo
 
 ## Configuration
-todo
+Configuration has two parts. First, the Azure Functions configuration, which goes in AppSettings of the function app. There doesn't seem to be support for [Azure App Configuration](https://docs.microsoft.com/en-us/azure/azure-app-configuration/) just yet for storing *all* of the config in App Configuration, so the Function-required settings for bindings are in AppSettings.
+
+Using Azure App Configuration isn't required - as long as these settings are available in AppSettings, environment variables or in App Configuration.
+### App Settings configuration
+These are mostly related to bindings. You can use different storage accounts for queues or the same one. In most cases a single storage account will be more than sufficient :)
+
+```
+"AzureWebJobsStorage": "UseDevelopmentStorage=true",
+"FUNCTIONS_WORKER_RUNTIME": "dotnet",
+// storage account connection string with the tagging queue
+"TaggingQueueStorageAccount": "UseDevelopmentStorage=true", 
+// name of the tagging queue
+"TaggingQueueName": "generate-tag-suite", 
+// storage account connection string with the deletion queue
+"DeleteQueueStorageAccount": "UseDevelopmentStorage=true", 
+// name of the deletion queue
+"DeleteResourceGroupQueueName": "delete-resource-group", 
+// storage account connection string with the outbox queue
+"OutboxQueueStorageAccount": "UseDevelopmentStorage=true", 
+// name of the outbox queue
+"OutboxQueueName": "mailer-outbox", 
+// sendgrid key for sending mail
+"SendGridKey": ""
+```
+
+### Azure App Configuration settings:
+These are related to behavior configuration and not tied to Azure. As this gets refactored out more it will be make more sense to have them split.
+
+```
+  "TaggingOptions": {
+    "ExpirationTagKey": "expires", // tag name to set for expiration
+    "ExpirationWindowInDays": 30,
+    "DefaultOwner": "unknown",
+    "DefaultTaggedByName": "azman"
+  },
+  "DeletionOptions": {
+    "Commit": false, // sort of like a 'what-if' switch, does everything except actually delete the resource group
+    "NotifyOnDeletion": false, // enables notifications
+    "ExportTemplateBeforeDeletion": true, // enables template export before deletion
+    "PersistenceStorageContainer": "templates", // container name for storing exported templates
+    "RequireExport": true // requires successful export for deletion to proceed. if `true` and the export fails, the deletion will not happen
+  }
+```
 
 ## Notifications
 todo
